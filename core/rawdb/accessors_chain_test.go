@@ -471,7 +471,7 @@ func TestAncientStorage(t *testing.T) {
 		t.Fatalf("no header returned")
 	}
 	if blob := ReadBodyRLP(db, hash, number); len(blob) == 0 {
-		t.Fatalf("no body returned")
+		t.Fatalf("no body returned") // TODO stage : revoir ce test qui sera en erreur car le bodie n'est plus systématiqment dans freeze
 	}
 	if blob := ReadReceiptsRLP(db, hash, number); len(blob) == 0 {
 		t.Fatalf("no receipts returned")

@@ -809,9 +809,13 @@ func writeAncientBlock(op ethdb.AncientWriteOp, block *types.Block, header *type
 	if err := op.Append(freezerHeaderTable, num, header); err != nil {
 		return fmt.Errorf("can't append block header %d: %v", num, err)
 	}
-	if err := op.Append(freezerBodiesTable, num, block.Body()); err != nil {
-		return fmt.Errorf("can't append block body %d: %v", num, err)
-	}
+	// Temporairement en commentaire pour tester la réaction du client 
+	// TODO stage :
+	// si option full -> toujours ecrire ces données
+	// tester tout les blocs -> si client responsable d'un bloc, écrite seulement ce bloc
+	// if err := op.Append(freezerBodiesTable, num, block.Body()); err != nil {
+	// 	return fmt.Errorf("can't append block body %d: %v", num, err)
+	// }
 	if err := op.Append(freezerReceiptTable, num, receipts); err != nil {
 		return fmt.Errorf("can't append block %d receipts: %v", num, err)
 	}

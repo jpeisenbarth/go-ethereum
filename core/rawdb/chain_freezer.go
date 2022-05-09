@@ -284,9 +284,13 @@ func (f *chainFreezer) freezeRange(nfdb *nofreezedb, number, limit uint64) (hash
 			if err := op.AppendRaw(freezerHeaderTable, number, header); err != nil {
 				return fmt.Errorf("can't write header to Freezer: %v", err)
 			}
-			if err := op.AppendRaw(freezerBodiesTable, number, body); err != nil {
-				return fmt.Errorf("can't write body to Freezer: %v", err)
-			}
+			// Temporairement en commentaire pour tester la réaction du client 
+			// TODO stage :
+			// si option full -> toujours ecrire ces données
+			// tester tout les blocs -> si client responsable d'un bloc, écrite seulement ce bloc
+			// if err := op.AppendRaw(freezerBodiesTable, number, body); err != nil {
+			// 	return fmt.Errorf("can't write body to Freezer: %v", err)
+			// }
 			if err := op.AppendRaw(freezerReceiptTable, number, receipts); err != nil {
 				return fmt.Errorf("can't write receipts to Freezer: %v", err)
 			}
