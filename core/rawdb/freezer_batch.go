@@ -67,6 +67,7 @@ func (batch *freezerBatch) commit() (item uint64, writeSize int64, err error) {
 	for name, tb := range batch.tables {
 		// TODO stage
 		// 	- Vérification si pas full et de responsable du bloc
+		// 	- Plus de véfication de bodies lors de l'écriture ?
 		if name == "bodies" {
 			continue
 		}
