@@ -140,8 +140,6 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}
-	// TODO Stage : done
-	enode.NewInstance(stack.Server().Self())
 	
 	log.Info("Initialised chain configuration", "config", chainConfig)
 
