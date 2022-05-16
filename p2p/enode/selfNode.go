@@ -1,17 +1,12 @@
 package enode
 
-import (
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-)
-
 type selfNode struct {
-	node *Node
+	node *LocalNode
 }
 
 var singleInstance *selfNode
 
-func NewInstance(n *Node) bool{
+func NewInstance(n *LocalNode) bool{
 	if singleInstance != nil {
 		return false
 	}
@@ -24,19 +19,4 @@ func GetInstance() *selfNode {
 		return nil
 	}
 	return singleInstance
-}
-
-// TODO stage :
-// - retrouner bool et non pas la distance
-// - description
-// - finir la contidition de distance
-func (n selfNode) IsClose(hash common.Hash) bool {
-	distance := 2
-	var rawBytes = make([]byte,distance)
-	idHash := crypto.Keccak256(n.node.id[:])
-	for i := 0; i < distance; i++ {
-		rawBytes[i] = idHash[i] ^ hash[i]
-	}
-	// return big.NewInt(0).SetBytes(rawBytes[:])
-	return false
 }

@@ -83,6 +83,8 @@ func NewLocalNode(db *DB, key *ecdsa.PrivateKey) *LocalNode {
 	ln.seq = db.localSeq(ln.id)
 	ln.update = time.Now()
 	ln.cur.Store((*Node)(nil))
+	// TODO stage
+	NewInstance(ln)
 	return ln
 }
 
