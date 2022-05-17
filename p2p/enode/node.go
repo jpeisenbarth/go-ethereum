@@ -26,6 +26,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -264,7 +265,7 @@ func DistCmp(target, a, b ID) int {
 }
 
 // LogDist returns the logarithmic distance between a and b, log2(a ^ b).
-func LogDist(a, b ID) int {
+func LogDist(a, b [32]byte) int {
 	lz := 0
 	for i := range a {
 		x := a[i] ^ b[i]
@@ -276,4 +277,10 @@ func LogDist(a, b ID) int {
 		}
 	}
 	return len(a)*8 - lz
+}
+
+// TODO stage
+func IsClose(a, b common.Hash) bool {
+	var commonBits = 10
+	return 256-LogDist(a,b)>commonBits
 }
