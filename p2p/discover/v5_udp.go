@@ -268,7 +268,7 @@ func (t *UDPv5) RandomNodes() enode.Iterator {
 
 // Lookup performs a recursive lookup for the given target.
 // It returns the closest nodes to target.
-func (t *UDPv5) Lookup(target enode.ID) []*enode.Node {
+func (t *UDPv5) Lookup(target [32]byte) []*enode.Node {
 	return t.newLookup(t.closeCtx, target).run()
 }
 
