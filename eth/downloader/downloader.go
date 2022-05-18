@@ -94,6 +94,7 @@ type headerTask struct {
 
 type Downloader struct {
 	mode uint32         // Synchronisation mode defining the strategy used (per sync cycle), use d.getMode() to get the SyncMode
+	dht  bool         	// TODO stage
 	mux  *event.TypeMux // Event multiplexer to announce sync operation events
 
 	checkpoint uint64   // Checkpoint block number to enforce head against (e.g. snap sync)
@@ -385,7 +386,11 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td, ttd *big.Int, 
 	if atomic.CompareAndSwapInt32(&d.notified, 0, 1) {
 		log.Info("Block synchronisation started")
 	}
-	if mode == SnapSync {
+
+	// Atomically set the requested sync mode
+	atomic.StoreUint32(&d.mode, uint32(mode))
+
+	if d.getMode() == SnapSync {
 		// Snap sync uses the snapshot namespace to store potentially flakey data until
 		// sync completely heals and finishes. Pause snapshot maintenance in the mean-
 		// time to prevent access.
@@ -418,9 +423,6 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td, ttd *big.Int, 
 
 	defer d.Cancel() // No matter what, we can't leave the cancel channel open
 
-	// Atomically set the requested sync mode
-	atomic.StoreUint32(&d.mode, uint32(mode))
-
 	// Retrieve the origin peer and initiate the downloading process
 	var p *peerConnection
 	if !beaconMode { // Beacon mode doesn't need a peer to sync from
@@ -436,7 +438,14 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td, ttd *big.Int, 
 }
 
 func (d *Downloader) getMode() SyncMode {
+	if SyncMode(atomic.LoadUint32(&d.mode)) == DHTSync {
+		return SnapSync
+	}
 	return SyncMode(atomic.LoadUint32(&d.mode))
+}
+
+func (d *Downloader) isDHT() bool {
+	return SyncMode(atomic.LoadUint32(&d.mode)) == DHTSync
 }
 
 // syncWithPeer starts a block synchronization based on the hash chain from the
