@@ -338,9 +338,16 @@ func (f *Freezer) validate() error {
 		name = kind
 		break
 	}
+	// TODO stage :
+	// Pas de conditions pour bodies
+	// Ajouter pas de condition si option DHT
+	// !!!!!!!!!!!!!!!!Trouver une variable pour bodies pas de dur!!!!!!!!!!!!!!!!!!!!!!!!
 	// Now check every table against that length
 	for kind, table := range f.tables {
 		items := atomic.LoadUint64(&table.items)
+		if name == "bodies" || kind == "bodies" {
+			continue
+		}
 		if length != items {
 			return fmt.Errorf("freezer tables %s and %s have differing lengths: %d != %d", kind, name, items, length)
 		}

@@ -25,7 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 )
 
 const (
@@ -62,7 +62,9 @@ func newChainFreezer(datadir string, namespace string, readonly bool, maxTableSi
 	}
 	return &chainFreezer{
 		Freezer:   freezer,
-		threshold: params.FullImmutabilityThreshold,
+		// tmp pour les test
+		// threshold: params.FullImmutabilityThreshold,
+		threshold: 1000,
 		quit:      make(chan struct{}),
 		trigger:   make(chan chan struct{}),
 	}, nil
@@ -264,9 +266,15 @@ func (f *chainFreezer) freezeRange(nfdb *nofreezedb, number, limit uint64) (hash
 			if len(header) == 0 {
 				return fmt.Errorf("block header missing, can't freeze block %d", number)
 			}
-			body := ReadBodyRLP(nfdb, hash, number)
-			if len(body) == 0 {
-				return fmt.Errorf("block body missing, can't freeze block %d", number)
+			// TODO stage :
+			// On empeche la lecture ici du body
+			// manque la vérification du type de noeud
+			var body []byte
+			if enode.GetInstance().IsClose(hash) {
+				body = ReadBodyRLP(nfdb, hash, number)
+				if len(body) == 0 {
+					return fmt.Errorf("block body missing, can't freeze block %d", number)
+				}
 			}
 			receipts := ReadReceiptsRLP(nfdb, hash, number)
 			if len(receipts) == 0 {
@@ -284,13 +292,13 @@ func (f *chainFreezer) freezeRange(nfdb *nofreezedb, number, limit uint64) (hash
 			if err := op.AppendRaw(freezerHeaderTable, number, header); err != nil {
 				return fmt.Errorf("can't write header to Freezer: %v", err)
 			}
-			// Temporairement en commentaire pour tester la réaction du client 
 			// TODO stage :
-			// si option full -> toujours ecrire ces données
-			// tester tout les blocs -> si client responsable d'un bloc, écrite seulement ce bloc
-			// if err := op.AppendRaw(freezerBodiesTable, number, body); err != nil {
-			// 	return fmt.Errorf("can't write body to Freezer: %v", err)
-			// }
+			// Actuellement je laisse l'écrire car ca crée d'autre erreur
+			// Lecrire à vide prendre moins de place mais en elle en prend -> future work empeche l'écriture
+			if err := op.AppendRaw(freezerBodiesTable, number, body); err != nil {
+				return fmt.Errorf("can't write body to Freezer: %v", err)
+			}
+
 			if err := op.AppendRaw(freezerReceiptTable, number, receipts); err != nil {
 				return fmt.Errorf("can't write receipts to Freezer: %v", err)
 			}
