@@ -269,7 +269,7 @@ func (f *chainFreezer) freezeRange(nfdb *nofreezedb, number, limit uint64) (hash
 			// TODO stage :
 			// On empeche la lecture ici du body
 			// manque la vérification du type de noeud
-			var body []byte
+			var body []byte = nil
 			if enode.GetInstance().IsClose(hash) {
 				body = ReadBodyRLP(nfdb, hash, number)
 				if len(body) == 0 {

@@ -29,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -812,13 +811,12 @@ func writeAncientBlock(op ethdb.AncientWriteOp, block *types.Block, header *type
 	}
 	// Temporairement en commentaire pour tester la réaction du client 
 	// TODO stage :
-	// si option full -> toujours ecrire ces données
-	// tester tout les blocs -> si client responsable d'un bloc, écrite seulement ce bloc
-	if node := enode.GetInstance(); node != nil && node.IsClose(block.Hash()) {
+	// LE BODY NE SERA PAS RECUPERER AVANT PENDANT LA SYNC
+	// Le body n'est pas transmis ici (bloqué a la sync)-> on écrit une ligne quand car sinon err
 		if err := op.Append(freezerBodiesTable, num, block.Body()); err != nil {
 			return fmt.Errorf("can't append block body %d: %v", num, err)
 		}
-	}
+
 	if err := op.Append(freezerReceiptTable, num, receipts); err != nil {
 		return fmt.Errorf("can't append block %d receipts: %v", num, err)
 	}
