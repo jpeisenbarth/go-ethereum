@@ -1327,9 +1327,6 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalIsSet(DeveloperFlag.Name) {
 		cfg.UseLightweightKDF = true
 	}
-	if ctx.GlobalIsSet(DhtFlag.Name) {
-		cfg.DHT = true
-	}
 	if ctx.GlobalIsSet(LightKDFFlag.Name) {
 		cfg.UseLightweightKDF = ctx.GlobalBool(LightKDFFlag.Name)
 	}

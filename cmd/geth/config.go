@@ -149,6 +149,9 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 		cfg.Ethstats.URL = ctx.GlobalString(utils.EthStatsURLFlag.Name)
 	}
 	applyMetricConfig(ctx, &cfg)
+	if ctx.GlobalIsSet(utils.DhtFlag.Name) {
+		cfg.Eth.DhtMode = true
+	}
 
 	return stack, cfg
 }
