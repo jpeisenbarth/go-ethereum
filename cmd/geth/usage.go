@@ -40,6 +40,7 @@ var AppHelpFlagGroups = []flags.FlagGroup{
 			utils.SmartCardDaemonPathFlag,
 			utils.NetworkIdFlag,
 			utils.SyncModeFlag,
+			utils.DhtFlag,
 			utils.ExitWhenSyncedFlag,
 			utils.GCModeFlag,
 			utils.TxLookupLimitFlag,

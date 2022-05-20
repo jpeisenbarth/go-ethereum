@@ -168,6 +168,10 @@ var (
 		Name:  "dev",
 		Usage: "Ephemeral proof-of-authority network with a pre-funded developer account, mining enabled",
 	}
+	DhtFlag = cli.BoolFlag{
+		Name:  "dht",
+		Usage: "TODO stage",
+	}
 	DeveloperPeriodFlag = cli.IntFlag{
 		Name:  "dev.period",
 		Usage: "Block period to use in developer mode (0 = mine only if transaction pending)",
@@ -219,7 +223,7 @@ var (
 	defaultSyncMode = ethconfig.Defaults.SyncMode
 	SyncModeFlag    = TextMarshalerFlag{
 		Name:  "syncmode",
-		Usage: `Blockchain sync mode ("snap", "dht", "full" or "light")`,
+		Usage: `Blockchain sync mode ("snap", "full" or "light")`,
 		Value: &defaultSyncMode,
 	}
 	GCModeFlag = cli.StringFlag{
@@ -1322,6 +1326,9 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	}
 	if ctx.GlobalIsSet(DeveloperFlag.Name) {
 		cfg.UseLightweightKDF = true
+	}
+	if ctx.GlobalIsSet(DhtFlag.Name) {
+		cfg.DHT = true
 	}
 	if ctx.GlobalIsSet(LightKDFFlag.Name) {
 		cfg.UseLightweightKDF = ctx.GlobalBool(LightKDFFlag.Name)

@@ -25,7 +25,6 @@ type SyncMode uint32
 const (
 	FullSync  SyncMode = iota // Synchronise the entire blockchain history from full blocks
 	SnapSync                  // Download the chain and the state via compact snapshots
-	DHTSync                  	// SnapSync + download only the bodies for which the node is responsible
 	LightSync                 // Download only the headers and terminate afterwards
 )
 
@@ -40,8 +39,6 @@ func (mode SyncMode) String() string {
 		return "full"
 	case SnapSync:
 		return "snap"
-	case DHTSync:
-		return "dht"
 	case LightSync:
 		return "light"
 	default:
@@ -55,8 +52,6 @@ func (mode SyncMode) MarshalText() ([]byte, error) {
 		return []byte("full"), nil
 	case SnapSync:
 		return []byte("snap"), nil
-	case DHTSync:
-		return []byte("dht"), nil
 	case LightSync:
 		return []byte("light"), nil
 	default:
@@ -70,8 +65,6 @@ func (mode *SyncMode) UnmarshalText(text []byte) error {
 		*mode = FullSync
 	case "snap":
 		*mode = SnapSync
-	case "dht":
-		*mode = DHTSync
 	case "light":
 		*mode = LightSync
 	default:
