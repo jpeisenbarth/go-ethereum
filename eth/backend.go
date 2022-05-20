@@ -227,6 +227,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		Merger:         merger,
 		Network:        config.NetworkId,
 		Sync:           config.SyncMode,
+		Dht:           config.DhtMode,
 		BloomCache:     uint64(cacheLimit),
 		EventMux:       eth.eventMux,
 		Checkpoint:     checkpoint,

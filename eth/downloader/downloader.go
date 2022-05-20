@@ -94,6 +94,7 @@ type headerTask struct {
 
 type Downloader struct {
 	mode uint32         // Synchronisation mode defining the strategy used (per sync cycle), use d.getMode() to get the SyncMode
+	dht bool         		//
 	mux  *event.TypeMux // Event multiplexer to announce sync operation events
 
 	checkpoint uint64   // Checkpoint block number to enforce head against (e.g. snap sync)
@@ -205,7 +206,7 @@ type BlockChain interface {
 }
 
 // New creates a new downloader to fetch hashes and blocks from remote peers.
-func New(checkpoint uint64, stateDb ethdb.Database, mux *event.TypeMux, chain BlockChain, lightchain LightChain, dropPeer peerDropFn, success func()) *Downloader {
+func New(checkpoint uint64, stateDb ethdb.Database, mux *event.TypeMux, chain BlockChain, lightchain LightChain, dropPeer peerDropFn, success func(), dht bool) *Downloader {
 	if lightchain == nil {
 		lightchain = chain
 	}
@@ -222,6 +223,7 @@ func New(checkpoint uint64, stateDb ethdb.Database, mux *event.TypeMux, chain Bl
 		quitCh:         make(chan struct{}),
 		SnapSyncer:     snap.NewSyncer(stateDb),
 		stateSyncStart: make(chan *stateSync),
+		dht: 						dht,	
 	}
 	dl.skeleton = newSkeleton(stateDb, dl.peers, dropPeer, newBeaconBackfiller(dl, success))
 
@@ -437,14 +439,7 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td, ttd *big.Int, 
 }
 
 func (d *Downloader) getMode() SyncMode {
-	if SyncMode(atomic.LoadUint32(&d.mode)) == DHTSync {
-		return SnapSync
-	}
 	return SyncMode(atomic.LoadUint32(&d.mode))
-}
-
-func (d *Downloader) isDHT() bool {
-	return SyncMode(atomic.LoadUint32(&d.mode)) == DHTSync
 }
 
 // syncWithPeer starts a block synchronization based on the hash chain from the
@@ -598,7 +593,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td, ttd *
 		}
 	}
 	// Initiate the sync using a concurrent header and content retrieval algorithm
-	d.queue.Prepare(origin+1, mode)
+	d.queue.Prepare(origin+1, mode, d.dht)
 	if d.syncInitHook != nil {
 		d.syncInitHook(origin, height)
 	}
@@ -612,11 +607,11 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td, ttd *
 	}
 	fetchers := []func() error{
 		headerFetcher, // Headers are always retrieved
-		// TODO stage
-		// On ne peut visiblement pas récupérer les receipts sans les body
-		func() error { return d.fetchBodies(origin+1, beaconMode) },   // Bodies are retrieved during normal and snap sync
 		func() error { return d.fetchReceipts(origin+1, beaconMode) }, // Receipts are retrieved during snap sync
 		func() error { return d.processHeaders(origin+1, td, ttd, beaconMode) },
+	}
+	if !d.dht {
+		fetchers = append(fetchers, func() error { return d.fetchBodies(origin+1, beaconMode) })   // Bodies are retrieved during normal and snap sync
 	}
 	if mode == SnapSync {
 		d.pivotLock.Lock()
@@ -1549,7 +1544,7 @@ func (d *Downloader) importBlockResults(results []*fetchResult) error {
 	for i, result := range results {
 		// TODO stage
 		blocks[i] = types.NewBlockWithHeader(result.Header)
-		if !d.isDHT() {
+		if !d.dht {
 			blocks[i] = blocks[i].WithBody(result.Transactions, result.Uncles)
 		}
 	}
@@ -1743,7 +1738,7 @@ func (d *Downloader) commitSnapSyncData(results []*fetchResult, stateSync *state
 	for i, result := range results {
 		// TODO stage :
 		blocks[i] = types.NewBlockWithHeader(result.Header)
-		if !d.isDHT() {
+		if !d.dht {
 			blocks[i] = blocks[i].WithBody(result.Transactions, result.Uncles)
 		}
 		receipts[i] = result.Receipts
@@ -1758,7 +1753,7 @@ func (d *Downloader) commitSnapSyncData(results []*fetchResult, stateSync *state
 func (d *Downloader) commitPivotBlock(result *fetchResult) error {
 	// TODO stage
 	block := types.NewBlockWithHeader(result.Header)
-	if !d.isDHT() {
+	if !d.dht {
 		block = block.WithBody(result.Transactions, result.Uncles)
 	}
 

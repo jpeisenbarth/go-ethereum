@@ -69,11 +69,11 @@ type fetchResult struct {
 	Receipts     types.Receipts
 }
 
-func newFetchResult(header *types.Header, fastSync bool) *fetchResult {
+func newFetchResult(header *types.Header, fastSync bool, dhtSync bool) *fetchResult {
 	item := &fetchResult{
 		Header: header,
 	}
-	if !header.EmptyBody() {
+	if !header.EmptyBody() && !dhtSync {
 		item.pending |= (1 << bodyType)
 	}
 	if fastSync && !header.EmptyReceipts() {
@@ -110,6 +110,7 @@ func (f *fetchResult) Done(kind uint) bool {
 // queue represents hashes that are either need fetching or are being fetched
 type queue struct {
 	mode SyncMode // Synchronisation mode to decide on the block parts to schedule for fetching
+	dht  bool
 
 	// Headers are "special", they download in batches, supported by a skeleton chain
 	headerHead      common.Hash                    // Hash of the last queued header to verify order
@@ -307,14 +308,18 @@ func (q *queue) Schedule(headers []*types.Header, hashes []common.Hash, from uin
 		// Make sure no duplicate requests are executed
 		// We cannot skip this, even if the block is empty, since this is
 		// what triggers the fetchResult creation.
-		if _, ok := q.blockTaskPool[hash]; ok {
-			log.Warn("Header already scheduled for block fetch", "number", header.Number, "hash", hash)
-		} else {
-			q.blockTaskPool[hash] = header
-			q.blockTaskQueue.Push(header, -int64(header.Number.Uint64()))
+		// TODO stage :
+		// En mode DHT on ne veut plus d'une requete de body systematique
+		if !q.dht {
+			if _, ok := q.blockTaskPool[hash]; ok {
+				log.Warn("Header already scheduled for block fetch", "number", header.Number, "hash", hash)
+			} else {
+				q.blockTaskPool[hash] = header
+				q.blockTaskQueue.Push(header, -int64(header.Number.Uint64()))
+			}
 		}
 		// Queue for receipt retrieval
-		if q.mode == SnapSync && !header.EmptyReceipts() {
+		if q.dht || (q.mode == SnapSync && !header.EmptyReceipts()) {
 			if _, ok := q.receiptTaskPool[hash]; ok {
 				log.Warn("Header already scheduled for receipt fetch", "number", header.Number, "hash", hash)
 			} else {
@@ -506,7 +511,7 @@ func (q *queue) reserveHeaders(p *peerConnection, count int, taskPool map[common
 		// we can ask the resultcache if this header is within the
 		// "prioritized" segment of blocks. If it is not, we need to throttle
 
-		stale, throttle, item, err := q.resultCache.AddFetch(header, q.mode == SnapSync)
+		stale, throttle, item, err := q.resultCache.AddFetch(header, q.mode == SnapSync, q.dht)
 		if stale {
 			// Don't put back in the task queue, this item has already been
 			// delivered upstream
@@ -892,11 +897,12 @@ func (q *queue) deliver(id string, taskPool map[common.Hash]*types.Header,
 
 // Prepare configures the result cache to allow accepting and caching inbound
 // fetch results.
-func (q *queue) Prepare(offset uint64, mode SyncMode) {
+func (q *queue) Prepare(offset uint64, mode SyncMode, dht bool) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
 	// Prepare the queue for sync results
 	q.resultCache.Prepare(offset)
 	q.mode = mode
+	q.dht = dht
 }
