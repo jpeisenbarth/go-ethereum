@@ -607,11 +607,9 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td, ttd *
 	}
 	fetchers := []func() error{
 		headerFetcher, // Headers are always retrieved
+		func() error { return d.fetchBodies(origin+1, beaconMode) },
 		func() error { return d.fetchReceipts(origin+1, beaconMode) }, // Receipts are retrieved during snap sync
 		func() error { return d.processHeaders(origin+1, td, ttd, beaconMode) },
-	}
-	if !d.dht {
-		fetchers = append(fetchers, func() error { return d.fetchBodies(origin+1, beaconMode) })   // Bodies are retrieved during normal and snap sync
 	}
 	if mode == SnapSync {
 		d.pivotLock.Lock()
