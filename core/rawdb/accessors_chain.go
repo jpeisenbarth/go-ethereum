@@ -813,9 +813,9 @@ func writeAncientBlock(op ethdb.AncientWriteOp, block *types.Block, header *type
 	// TODO stage :
 	// LE BODY NE SERA PAS RECUPERER AVANT PENDANT LA SYNC
 	// Le body n'est pas transmis ici (bloqué a la sync)-> on écrit une ligne quand car sinon err
-		if err := op.Append(freezerBodiesTable, num, block.Body()); err != nil {
-			return fmt.Errorf("can't append block body %d: %v", num, err)
-		}
+	if err := op.Append(freezerBodiesTable, num, block.Body()); err != nil {
+		return fmt.Errorf("can't append block body %d: %v", num, err)
+	}
 
 	if err := op.Append(freezerReceiptTable, num, receipts); err != nil {
 		return fmt.Errorf("can't append block %d receipts: %v", num, err)
