@@ -122,6 +122,9 @@ func (batch *freezerTableBatch) reset() {
 // precautionary parameter to ensure data correctness, but the table will reject already
 // existing data.
 func (batch *freezerTableBatch) Append(item uint64, data interface{}) error {
+	if data == nil {
+		return batch.AppendRaw(item, nil)
+	}
 	if item != batch.curItem {
 		return fmt.Errorf("%w: have %d want %d", errOutOrderInsertion, item, batch.curItem)
 	}

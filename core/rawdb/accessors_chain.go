@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -777,7 +778,7 @@ func WriteBlock(db ethdb.KeyValueWriter, block *types.Block) {
 }
 
 // WriteAncientBlocks writes entire block data into ancient store and returns the total written size.
-func WriteAncientBlocks(db ethdb.AncientWriter, blocks []*types.Block, receipts []types.Receipts, td *big.Int) (int64, error) {
+func WriteAncientBlocks(db ethdb.AncientWriter, blocks []*types.Block, receipts []types.Receipts, td *big.Int, dht bool) (int64, error) {
 	var (
 		tdSum      = new(big.Int).Set(td)
 		stReceipts []*types.ReceiptForStorage
@@ -793,7 +794,7 @@ func WriteAncientBlocks(db ethdb.AncientWriter, blocks []*types.Block, receipts 
 			if i > 0 {
 				tdSum.Add(tdSum, header.Difficulty)
 			}
-			if err := writeAncientBlock(op, block, header, stReceipts, tdSum); err != nil {
+			if err := writeAncientBlock(op, block, header, stReceipts, tdSum, dht); err != nil {
 				return err
 			}
 		}
@@ -801,7 +802,7 @@ func WriteAncientBlocks(db ethdb.AncientWriter, blocks []*types.Block, receipts 
 	})
 }
 
-func writeAncientBlock(op ethdb.AncientWriteOp, block *types.Block, header *types.Header, receipts []*types.ReceiptForStorage, td *big.Int) error {
+func writeAncientBlock(op ethdb.AncientWriteOp, block *types.Block, header *types.Header, receipts []*types.ReceiptForStorage, td *big.Int, dht bool) error {
 	num := block.NumberU64()
 	if err := op.AppendRaw(freezerHashTable, num, block.Hash().Bytes()); err != nil {
 		return fmt.Errorf("can't add block %d hash: %v", num, err)
@@ -813,8 +814,15 @@ func writeAncientBlock(op ethdb.AncientWriteOp, block *types.Block, header *type
 	// TODO stage :
 	// LE BODY NE SERA PAS RECUPERER AVANT PENDANT LA SYNC
 	// Le body n'est pas transmis ici (bloqué a la sync)-> on écrit une ligne quand car sinon err
-	if err := op.Append(freezerBodiesTable, num, block.Body()); err != nil {
-		return fmt.Errorf("can't append block body %d: %v", num, err)
+	// On passe nil pour ne rien ecrire dans freeze. On ce retrouve dans freeze avec numblock -> (rien)
+	if dht && !enode.GetInstance().IsClose(block.Hash()) {
+		if err := op.Append(freezerBodiesTable, num, nil); err != nil {
+			return fmt.Errorf("can't append block body %d: %v", num, err)
+		}
+	} else {
+		if err := op.Append(freezerBodiesTable, num, block.Body()); err != nil {
+			return fmt.Errorf("can't append block body %d: %v", num, err)
+		}
 	}
 
 	if err := op.Append(freezerReceiptTable, num, receipts); err != nil {
