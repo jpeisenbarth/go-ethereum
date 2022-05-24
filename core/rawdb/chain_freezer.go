@@ -87,7 +87,7 @@ func (f *chainFreezer) Close() error {
 //
 // This functionality is deliberately broken off from block importing to avoid
 // incurring additional data shuffling delays on block propagation.
-func (f *chainFreezer) freeze(db ethdb.KeyValueStore) {
+func (f *chainFreezer) freeze(db ethdb.KeyValueStore, dht bool) {
 	nfdb := &nofreezedb{KeyValueStore: db}
 
 	var (
@@ -158,7 +158,7 @@ func (f *chainFreezer) freeze(db ethdb.KeyValueStore) {
 		if limit-first > freezerBatchLimit {
 			limit = first + freezerBatchLimit
 		}
-		ancients, err := f.freezeRange(nfdb, first, limit)
+		ancients, err := f.freezeRange(nfdb, first, limit, dht)
 		if err != nil {
 			log.Error("Error in block freeze operation", "err", err)
 			backoff = true
@@ -252,7 +252,7 @@ func (f *chainFreezer) freeze(db ethdb.KeyValueStore) {
 	}
 }
 
-func (f *chainFreezer) freezeRange(nfdb *nofreezedb, number, limit uint64) (hashes []common.Hash, err error) {
+func (f *chainFreezer) freezeRange(nfdb *nofreezedb, number, limit uint64, dht bool) (hashes []common.Hash, err error) {
 	hashes = make([]common.Hash, 0, limit-number)
 
 	_, err = f.ModifyAncients(func(op ethdb.AncientWriteOp) error {
@@ -270,7 +270,7 @@ func (f *chainFreezer) freezeRange(nfdb *nofreezedb, number, limit uint64) (hash
 			// On empeche la lecture ici du body
 			// manque la vérification du type de noeud
 			var body []byte = nil
-			if enode.GetInstance().IsClose(hash) {
+			if !dht || enode.GetInstance().IsClose(hash) {
 				body = ReadBodyRLP(nfdb, hash, number)
 				if len(body) == 0 {
 					return fmt.Errorf("block body missing, can't freeze block %d", number)
