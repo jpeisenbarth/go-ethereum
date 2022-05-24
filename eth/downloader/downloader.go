@@ -1541,10 +1541,8 @@ func (d *Downloader) importBlockResults(results []*fetchResult) error {
 	blocks := make([]*types.Block, len(results))
 	for i, result := range results {
 		// TODO stage
-		blocks[i] = types.NewBlockWithHeader(result.Header)
-		if !d.dht {
-			blocks[i] = blocks[i].WithBody(result.Transactions, result.Uncles)
-		}
+		// théoriquement pas récupérer avant si pas dans la range
+		blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Uncles)
 	}
 	// Downloaded blocks are always regarded as trusted after the
 	// transition. Because the downloaded chain is guided by the
@@ -1735,10 +1733,8 @@ func (d *Downloader) commitSnapSyncData(results []*fetchResult, stateSync *state
 	receipts := make([]types.Receipts, len(results))
 	for i, result := range results {
 		// TODO stage :
-		blocks[i] = types.NewBlockWithHeader(result.Header)
-		if !d.dht {
-			blocks[i] = blocks[i].WithBody(result.Transactions, result.Uncles)
-		}
+		// théoriquement pas récuperer avant si pas dans la range
+		blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Uncles)
 		receipts[i] = result.Receipts
 	}
 	if index, err := d.blockchain.InsertReceiptChain(blocks, receipts, d.ancientLimit); err != nil {
@@ -1750,10 +1746,8 @@ func (d *Downloader) commitSnapSyncData(results []*fetchResult, stateSync *state
 
 func (d *Downloader) commitPivotBlock(result *fetchResult) error {
 	// TODO stage
-	block := types.NewBlockWithHeader(result.Header)
-	if !d.dht {
-		block = block.WithBody(result.Transactions, result.Uncles)
-	}
+	// théoriquement pas récuperer avant si pas dans la range
+	block := types.NewBlockWithHeader(result.Header).WithBody(result.Transactions, result.Uncles)
 
 	log.Debug("Committing snap sync pivot as new head", "number", block.Number(), "hash", block.Hash())
 

@@ -31,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/metrics"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 )
 
 const (
@@ -73,7 +74,8 @@ func newFetchResult(header *types.Header, fastSync bool, dhtSync bool) *fetchRes
 	item := &fetchResult{
 		Header: header,
 	}
-	if !header.EmptyBody() && !dhtSync {
+	// TODO STAGE
+	if (!header.EmptyBody()  && !dhtSync) || (dhtSync && enode.GetInstance().IsClose(header.Hash())) {
 		item.pending |= (1 << bodyType)
 	}
 	if fastSync && !header.EmptyReceipts() {
@@ -305,12 +307,14 @@ func (q *queue) Schedule(headers []*types.Header, hashes []common.Hash, from uin
 			log.Warn("Header broke chain ancestry", "number", header.Number, "hash", hash)
 			break
 		}
+		requestBody := false
 		// Make sure no duplicate requests are executed
 		// We cannot skip this, even if the block is empty, since this is
 		// what triggers the fetchResult creation.
 		// TODO stage :
 		// En mode DHT on ne veut plus d'une requete de body systematique
-		if !q.dht {
+		if !q.dht || enode.GetInstance().IsClose(hash)  {
+			requestBody = true
 			if _, ok := q.blockTaskPool[hash]; ok {
 				log.Warn("Header already scheduled for block fetch", "number", header.Number, "hash", hash)
 			} else {
@@ -319,7 +323,7 @@ func (q *queue) Schedule(headers []*types.Header, hashes []common.Hash, from uin
 			}
 		}
 		// Queue for receipt retrieval
-		if q.dht || (q.mode == SnapSync && !header.EmptyReceipts()) {
+		if (q.dht && !requestBody)  || (q.mode == SnapSync && !header.EmptyReceipts()) {
 			if _, ok := q.receiptTaskPool[hash]; ok {
 				log.Warn("Header already scheduled for receipt fetch", "number", header.Number, "hash", hash)
 			} else {
