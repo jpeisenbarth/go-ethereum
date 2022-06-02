@@ -84,7 +84,7 @@ func NewLocalNode(db *DB, key *ecdsa.PrivateKey) *LocalNode {
 	ln.update = time.Now()
 	ln.cur.Store((*Node)(nil))
 	// TODO stage
-	NewInstance(ln)
+	NewInstanceSelfNode(ln)
 	return ln
 }
 

@@ -815,7 +815,7 @@ func writeAncientBlock(op ethdb.AncientWriteOp, block *types.Block, header *type
 	// LE BODY NE SERA PAS RECUPERER AVANT PENDANT LA SYNC
 	// Le body n'est pas transmis ici (bloqué a la sync)-> on écrit une ligne quand car sinon err
 	// On passe nil pour ne rien ecrire dans freeze. On ce retrouve dans freeze avec numblock -> (rien)
-	if dht && !enode.GetInstance().IsClose(block.Hash()) {
+	if dht && !enode.GetInstanceSelfNode().IsClose(block.Hash()) {
 		if err := op.Append(freezerBodiesTable, num, nil); err != nil {
 			return fmt.Errorf("can't append block body %d: %v", num, err)
 		}

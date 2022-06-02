@@ -75,7 +75,7 @@ func newFetchResult(header *types.Header, fastSync bool, dhtSync bool) *fetchRes
 		Header: header,
 	}
 	// TODO STAGE
-	if (!header.EmptyBody()  && !dhtSync) || (dhtSync && enode.GetInstance().IsClose(header.Hash())) {
+	if (!header.EmptyBody()  && !dhtSync) || (dhtSync && enode.GetInstanceSelfNode().IsClose(header.Hash())) {
 		item.pending |= (1 << bodyType)
 	}
 	if fastSync && !header.EmptyReceipts() {
@@ -313,7 +313,7 @@ func (q *queue) Schedule(headers []*types.Header, hashes []common.Hash, from uin
 		// what triggers the fetchResult creation.
 		// TODO stage :
 		// En mode DHT on ne veut plus d'une requete de body systematique
-		if !q.dht || enode.GetInstance().IsClose(hash)  {
+		if !q.dht || enode.GetInstanceSelfNode().IsClose(hash)  {
 			requestBody = true
 			if _, ok := q.blockTaskPool[hash]; ok {
 				log.Warn("Header already scheduled for block fetch", "number", header.Number, "hash", hash)

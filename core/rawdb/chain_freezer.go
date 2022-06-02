@@ -270,7 +270,7 @@ func (f *chainFreezer) freezeRange(nfdb *nofreezedb, number, limit uint64, dht b
 			// On empeche la lecture ici du body
 			// manque la vérification du type de noeud
 			var body []byte = nil
-			if !dht || enode.GetInstance().IsClose(hash) {
+			if !dht || enode.GetInstanceSelfNode().IsClose(hash) {
 				body = ReadBodyRLP(nfdb, hash, number)
 				if len(body) == 0 {
 					return fmt.Errorf("block body missing, can't freeze block %d", number)

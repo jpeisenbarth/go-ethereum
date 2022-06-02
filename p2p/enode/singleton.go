@@ -9,21 +9,21 @@ type selfNode struct {
 	node *LocalNode
 }
 
-var singleInstance *selfNode
+var singleInstanceSelfNode *selfNode
 
-func NewInstance(n *LocalNode) bool{
-	if singleInstance != nil {
+func NewInstanceSelfNode(n *LocalNode) bool{
+	if singleInstanceSelfNode != nil {
 		return false
 	}
-	singleInstance = &selfNode{node: n}
+	singleInstanceSelfNode = &selfNode{node: n}
 	return true
 }
 
-func GetInstance() *selfNode {
-	if singleInstance == nil {
+func GetInstanceSelfNode() *selfNode {
+	if singleInstanceSelfNode == nil {
 		return nil
 	}
-	return singleInstance
+	return singleInstanceSelfNode
 }
 
 // TODO stage
