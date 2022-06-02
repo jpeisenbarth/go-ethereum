@@ -75,8 +75,9 @@ func newFetchResult(header *types.Header, fastSync bool, dhtSync bool) *fetchRes
 		Header: header,
 	}
 	// TODO STAGE
+	// Trouver un truc pour dire sync dht par la dht car sinon ca amrche pas
 	if (!header.EmptyBody()  && !dhtSync) || (dhtSync && enode.GetInstanceSelfNode().IsClose(header.Hash())) {
-		item.pending |= (1 << bodyType)
+		// item.pending |= (1 << bodyType)
 	}
 	if fastSync && !header.EmptyReceipts() {
 		item.pending |= (1 << receiptType)

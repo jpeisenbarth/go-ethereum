@@ -89,6 +89,7 @@ type handlerConfig struct {
 	EventMux       *event.TypeMux            // Legacy event mux, deprecate for `feed`
 	Checkpoint     *params.TrustedCheckpoint // Hard coded checkpoint for sync challenges
 	RequiredBlocks map[uint64]common.Hash    // Hard coded map of required block hashes for sync challenges
+	P2pServer			 *p2p.Server
 }
 
 type handler struct {
@@ -201,7 +202,11 @@ func newHandler(config *handlerConfig) (*handler, error) {
 	// bloom when it's done.
 	h.downloader = downloader.New(h.checkpointNumber, config.Database, h.eventMux, h.chain, nil, h.removePeer, success, config.Dht, hashesChan)
 	
-	h.downloaderDHT = downloaderdht.New(hashesChan)
+	h.downloaderDHT = downloaderdht.New(hashesChan, 
+		&downloaderdht.Config{
+			Database: config.Database,
+			P2pServer: config.P2pServer,
+		})
 
 
 	// Construct the fetcher (short sync)

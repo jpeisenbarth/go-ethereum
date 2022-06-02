@@ -233,6 +233,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		EventMux:       eth.eventMux,
 		Checkpoint:     checkpoint,
 		RequiredBlocks: config.RequiredBlocks,
+		P2pServer:      stack.Server(),
 	}); err != nil {
 		return nil, err
 	}

@@ -181,6 +181,7 @@ type Server struct {
 	nodedb    *enode.DB
 	localnode *enode.LocalNode
 	ntab      *discover.UDPv4
+	Ntab      *discover.UDPv4
 	DiscV5    *discover.UDPv5
 	discmix   *enode.FairMix
 	dialsched *dialScheduler
@@ -590,6 +591,7 @@ func (srv *Server) setupDiscovery() error {
 			return err
 		}
 		srv.ntab = ntab
+		srv.Ntab = ntab
 		srv.discmix.AddSource(ntab.RandomNodes())
 	}
 
