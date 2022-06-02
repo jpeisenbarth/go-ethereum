@@ -31,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/forkid"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth/downloader"
+	"github.com/ethereum/go-ethereum/eth/downloaderDHT"
 	"github.com/ethereum/go-ethereum/eth/fetcher"
 	"github.com/ethereum/go-ethereum/eth/protocols/eth"
 	"github.com/ethereum/go-ethereum/eth/protocols/snap"
@@ -106,6 +107,7 @@ type handler struct {
 	maxPeers int
 
 	downloader   *downloader.Downloader
+	downloaderDHT   *downloaderdht.DownloaderDHT
 	blockFetcher *fetcher.BlockFetcher
 	txFetcher    *fetcher.TxFetcher
 	peers        *peerSet
@@ -192,10 +194,15 @@ func newHandler(config *handlerConfig) (*handler, error) {
 			}
 		}
 	}
+
+	hashesChan := make(chan common.Hash)
 	// Construct the downloader (long sync) and its backing state bloom if snap
 	// sync is requested. The downloader is responsible for deallocating the state
 	// bloom when it's done.
-	h.downloader = downloader.New(h.checkpointNumber, config.Database, h.eventMux, h.chain, nil, h.removePeer, success, config.Dht)
+	h.downloader = downloader.New(h.checkpointNumber, config.Database, h.eventMux, h.chain, nil, h.removePeer, success, config.Dht, hashesChan)
+	
+	h.downloaderDHT = downloaderdht.New(hashesChan)
+
 
 	// Construct the fetcher (short sync)
 	validator := func(header *types.Header) error {

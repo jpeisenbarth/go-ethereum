@@ -145,10 +145,12 @@ type queue struct {
 	closed bool
 
 	lastStatLog time.Time
+
+	headerhashChan chan common.Hash
 }
 
 // newQueue creates a new download queue for scheduling block retrieval.
-func newQueue(blockCacheLimit int, thresholdInitialSize int) *queue {
+func newQueue(blockCacheLimit int, thresholdInitialSize int, c chan common.Hash) *queue {
 	lock := new(sync.RWMutex)
 	q := &queue{
 		headerContCh:     make(chan bool, 1),
@@ -158,6 +160,7 @@ func newQueue(blockCacheLimit int, thresholdInitialSize int) *queue {
 		receiptWakeCh:    make(chan bool, 1),
 		active:           sync.NewCond(lock),
 		lock:             lock,
+		headerhashChan: 		c,
 	}
 	q.Reset(blockCacheLimit, thresholdInitialSize)
 	return q
@@ -314,12 +317,18 @@ func (q *queue) Schedule(headers []*types.Header, hashes []common.Hash, from uin
 		// TODO stage :
 		// En mode DHT on ne veut plus d'une requete de body systematique
 		if !q.dht || enode.GetInstanceSelfNode().IsClose(hash)  {
-			requestBody = true
-			if _, ok := q.blockTaskPool[hash]; ok {
-				log.Warn("Header already scheduled for block fetch", "number", header.Number, "hash", hash)
+			// MODE DHT
+			if q.dht {
+				q.headerhashChan <- hash
 			} else {
-				q.blockTaskPool[hash] = header
-				q.blockTaskQueue.Push(header, -int64(header.Number.Uint64()))
+				// MODE RECHERCHE FULL	
+				requestBody = true
+				if _, ok := q.blockTaskPool[hash]; ok {
+					log.Warn("Header already scheduled for block fetch", "number", header.Number, "hash", hash)
+				} else {
+					q.blockTaskPool[hash] = header
+					q.blockTaskQueue.Push(header, -int64(header.Number.Uint64()))
+				}
 			}
 		}
 		// Queue for receipt retrieval
