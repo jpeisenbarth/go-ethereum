@@ -198,6 +198,8 @@ type Server struct {
 
 	// State of run loop and listenLoop.
 	inboundHistory expHeap
+	
+	searchHash chan common.Hash
 }
 
 type peerOpFunc func(map[enode.ID]*Peer)
@@ -471,6 +473,8 @@ func (srv *Server) Start() (err error) {
 	srv.peerOp = make(chan peerOpFunc)
 	srv.peerOpDone = make(chan struct{})
 
+	srv.searchHash = make(chan common.Hash)
+
 	if err := srv.setupLocalNode(); err != nil {
 		return err
 	}
@@ -632,9 +636,40 @@ func (srv *Server) setupDialScheduler() {
 	if config.dialer == nil {
 		config.dialer = tcpDialer{&net.Dialer{Timeout: defaultDialTimeout}}
 	}
-	srv.dialsched = newDialScheduler(config, srv.discmix, srv.SetupConn)
+	
+	var closestNode chan *enode.Node
+	closestNode = make(chan *enode.Node)
+	go srv.findClostestNode(srv.searchHash, closestNode)
+	
+	
+	srv.dialsched = newDialScheduler(config, srv.discmix, srv.SetupConn, closestNode)
+	
 	for _, n := range srv.StaticNodes {
 		srv.dialsched.addStatic(n)
+	}
+}
+
+func (srv *Server) AddHash(hash common.Hash) {
+	srv.searchHash <- hash
+}
+
+func (srv *Server) findClostestNode(searchHash chan common.Hash, closestNode chan *enode.Node) {
+	// en tout premier on ajoute un noeud proche du srv
+	nodes := srv.DiscV5.Lookup(srv.LocalNode().ID())
+	for _, node := range(nodes) {
+		closestNode <- node
+	}
+	
+
+	// exec classique
+	for {
+		select {
+		case hash := <- searchHash:
+			nodes := srv.DiscV5.Lookup(hash)
+			for _, node := range(nodes) {
+				closestNode <- node
+			}
+		}
 	}
 }
 

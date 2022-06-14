@@ -34,6 +34,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/p2p"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -95,6 +97,7 @@ type headerTask struct {
 type Downloader struct {
 	mode uint32         // Synchronisation mode defining the strategy used (per sync cycle), use d.getMode() to get the SyncMode
 	dht bool         		//
+	P2pServer *p2p.Server         		//
 	mux  *event.TypeMux // Event multiplexer to announce sync operation events
 
 	checkpoint uint64   // Checkpoint block number to enforce head against (e.g. snap sync)
@@ -208,7 +211,7 @@ type BlockChain interface {
 }
 
 // New creates a new downloader to fetch hashes and blocks from remote peers.
-func New(checkpoint uint64, stateDb ethdb.Database, mux *event.TypeMux, chain BlockChain, lightchain LightChain, dropPeer peerDropFn, success func(), dht bool, hashChan chan common.Hash) *Downloader {
+func New(checkpoint uint64, stateDb ethdb.Database, mux *event.TypeMux, chain BlockChain, lightchain LightChain, dropPeer peerDropFn, success func(), dht bool, server *p2p.Server) *Downloader {
 	if lightchain == nil {
 		lightchain = chain
 	}
@@ -216,7 +219,7 @@ func New(checkpoint uint64, stateDb ethdb.Database, mux *event.TypeMux, chain Bl
 		stateDB:        stateDb,
 		mux:            mux,
 		checkpoint:     checkpoint,
-		queue:          newQueue(blockCacheMaxItems, blockCacheInitialItems, hashChan),
+		queue:          newQueue(blockCacheMaxItems, blockCacheInitialItems),
 		peers:          newPeerSet(),
 		blockchain:     chain,
 		lightchain:     lightchain,
@@ -225,8 +228,8 @@ func New(checkpoint uint64, stateDb ethdb.Database, mux *event.TypeMux, chain Bl
 		quitCh:         make(chan struct{}),
 		SnapSyncer:     snap.NewSyncer(stateDb),
 		stateSyncStart: make(chan *stateSync),
-		dht: 						dht,	
-		headerHashes: 	hashChan,	
+		dht: 						dht,
+		P2pServer:			server,	
 	}
 	dl.skeleton = newSkeleton(stateDb, dl.peers, dropPeer, newBeaconBackfiller(dl, success))
 
@@ -1231,6 +1234,7 @@ func (d *Downloader) fillHeaderSkeleton(from uint64, skeleton []*types.Header) (
 // and also periodically checking for timeouts.
 func (d *Downloader) fetchBodies(from uint64, beaconMode bool) error {
 	log.Debug("Downloading block bodies", "origin", from)
+	// err := d.concurrentFetchBodiesDht((*bodyQueue)(d), beaconMode)
 	err := d.concurrentFetch((*bodyQueue)(d), beaconMode)
 
 	log.Debug("Block body download terminated", "err", err)
@@ -1445,6 +1449,27 @@ func (d *Downloader) processHeaders(origin uint64, td, ttd *big.Int, beaconMode 
 						case <-time.After(time.Second):
 						}
 					}
+					// TODO STAGE
+					// Si pas de pair proche du hash alors l'ajoute
+					if d.dht {
+						for _, hash := range(chunkHashes) {
+							if !enode.GetInstanceSelfNode().IsClose(hash) {
+								continue
+							}
+	
+							founded := false
+							for _, peer := range(d.peers.peers) {
+								if enode.IsClose(hash, common.HexToHash(peer.id)) {
+									founded = true
+									break
+								}
+							}
+							if !founded {
+								d.P2pServer.AddHash(hash)
+							}
+						}
+					}
+
 					// Otherwise insert the headers for content retrieval
 					inserts := d.queue.Schedule(chunkHeaders, chunkHashes, origin)
 					if len(inserts) != len(chunkHeaders) {

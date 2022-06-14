@@ -160,7 +160,7 @@ func (cfg dialConfig) withDefaults() dialConfig {
 	return cfg
 }
 
-func newDialScheduler(config dialConfig, it enode.Iterator, setupFunc dialSetupFunc) *dialScheduler {
+func newDialScheduler(config dialConfig, it enode.Iterator, setupFunc dialSetupFunc, closestNode chan *enode.Node) *dialScheduler {
 	d := &dialScheduler{
 		dialConfig:  config.withDefaults(),
 		setupFunc:   setupFunc,
@@ -178,6 +178,9 @@ func newDialScheduler(config dialConfig, it enode.Iterator, setupFunc dialSetupF
 	d.ctx, d.cancel = context.WithCancel(context.Background())
 	d.wg.Add(2)
 	go d.readNodes(it)
+	if closestNode != nil {
+		go d.AddNodes(closestNode)
+	}
 	go d.loop(it)
 	return d
 }
@@ -322,6 +325,18 @@ func (d *dialScheduler) readNodes(it enode.Iterator) {
 	for it.Next() {
 		select {
 		case d.nodesIn <- it.Node():
+		case <-d.ctx.Done():
+		}
+	}
+}
+
+func (d *dialScheduler) AddNodes(closestNode chan *enode.Node) {
+	defer d.wg.Done()
+
+	for {
+		select {
+		case n := <- closestNode:
+			d.nodesIn <- n
 		case <-d.ctx.Done():
 		}
 	}
