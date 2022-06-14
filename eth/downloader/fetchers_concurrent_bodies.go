@@ -58,6 +58,16 @@ func (q *bodyQueue) reserve(peer *peerConnection, items int) (*fetchRequest, boo
 	return q.queue.ReserveBodies(peer, items)
 }
 
+type Reserve struct {
+	Request *fetchRequest
+	Progress bool
+	Throttle bool
+}  
+
+func (q *bodyQueue) reserveBodies(peer []*peerConnection, count func(*peerConnection, time.Duration)(int), t time.Duration) []Reserve {
+	return q.queue.ReserveBodiesDHT(peer, count, t)
+}
+
 // unreserve is resposible for removing the current body retrieval allocation
 // assigned to a specific peer and placing it back into the pool to allow
 // reassigning to some other peer.
