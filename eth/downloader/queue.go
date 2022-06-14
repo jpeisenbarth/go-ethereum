@@ -77,7 +77,7 @@ func newFetchResult(header *types.Header, fastSync bool, dhtSync bool) *fetchRes
 	// TODO STAGE
 	// Trouver un truc pour dire sync dht par la dht car sinon ca amrche pas
 	if (!header.EmptyBody()  && !dhtSync) || (dhtSync && enode.GetInstanceSelfNode().IsClose(header.Hash())) {
-		// item.pending |= (1 << bodyType)
+		item.pending |= (1 << bodyType)
 	}
 	if fastSync && !header.EmptyReceipts() {
 		item.pending |= (1 << receiptType)
@@ -147,11 +147,10 @@ type queue struct {
 
 	lastStatLog time.Time
 
-	headerhashChan chan common.Hash
 }
 
 // newQueue creates a new download queue for scheduling block retrieval.
-func newQueue(blockCacheLimit int, thresholdInitialSize int, c chan common.Hash) *queue {
+func newQueue(blockCacheLimit int, thresholdInitialSize int) *queue {
 	lock := new(sync.RWMutex)
 	q := &queue{
 		headerContCh:     make(chan bool, 1),
@@ -161,7 +160,6 @@ func newQueue(blockCacheLimit int, thresholdInitialSize int, c chan common.Hash)
 		receiptWakeCh:    make(chan bool, 1),
 		active:           sync.NewCond(lock),
 		lock:             lock,
-		headerhashChan: 		c,
 	}
 	q.Reset(blockCacheLimit, thresholdInitialSize)
 	return q
@@ -318,19 +316,14 @@ func (q *queue) Schedule(headers []*types.Header, hashes []common.Hash, from uin
 		// TODO stage :
 		// En mode DHT on ne veut plus d'une requete de body systematique
 		if !q.dht || enode.GetInstanceSelfNode().IsClose(hash)  {
-			// MODE DHT
-			if q.dht {
-				q.headerhashChan <- hash
+			requestBody = true
+			if _, ok := q.blockTaskPool[hash]; ok {
+				log.Warn("Header already scheduled for block fetch", "number", header.Number, "hash", hash)
 			} else {
-				// MODE RECHERCHE FULL	
-				requestBody = true
-				if _, ok := q.blockTaskPool[hash]; ok {
-					log.Warn("Header already scheduled for block fetch", "number", header.Number, "hash", hash)
-				} else {
-					q.blockTaskPool[hash] = header
-					q.blockTaskQueue.Push(header, -int64(header.Number.Uint64()))
-				}
+				q.blockTaskPool[hash] = header
+				q.blockTaskQueue.Push(header, -int64(header.Number.Uint64()))
 			}
+			
 		}
 		// Queue for receipt retrieval
 		if (q.dht && !requestBody)  || (q.mode == SnapSync && !header.EmptyReceipts()) {
