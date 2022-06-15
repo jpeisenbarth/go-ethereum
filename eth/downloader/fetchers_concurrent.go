@@ -23,6 +23,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/prque"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth/protocols/eth"
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -467,44 +468,46 @@ func (d *Downloader) concurrentFetchBodiesDht(queue *bodyQueue, beaconMode bool)
 				progressed bool
 				throttled  bool
 				queued     = queue.pending()
+				noClosePeers bool
 			)
-			// Short circuit if throttling activated or there are no more
-			// queued tasks to be retrieved
-			if throttled {
-				break
-			}
-			if queued = queue.pending(); queued == 0 {
-				break
-			}
-			
-			// Reserve a chunk of fetches for a peer. A nil can mean either that
-			// no more headers are available, or that the peer is known not to
-			// have them.
-			listReserve := queue.reserveBodies(idles, queue.capacity, d.peers.rates.TargetRoundTrip())
-			for _, reserve := range listReserve {
-				if reserve.Progress {
+			for _, peer := range idles {
+				// Short circuit if throttling activated or there are no more
+				// queued tasks to be retrieved
+				if throttled {
+					break
+				}
+				if queued = queue.pending(); queued == 0 {
+					break
+				}
+				// Reserve a chunk of fetches for a peer. A nil can mean either that
+				// no more headers are available, or that the peer is known not to
+				// have them.
+				request, progress, throttle, nclosePeers := queue.reserveBodies(peer, queue.capacity(peer, d.peers.rates.TargetRoundTrip()))
+				if progress {
 					progressed = true
 				}
-				if reserve.Throttle {
+				if nclosePeers {
+					noClosePeers = true
+				}
+				if throttle {
 					throttled = true
 					throttleCounter.Inc(1)
 				}
-				if reserve.Request == nil {
+				if request == nil {
 					continue
 				}
-
 				// Fetch the chunk and make sure any errors return the hashes to the queue
-				req, err := queue.request(reserve.Request.Peer, reserve.Request, responses)
+				req, err := queue.request(peer, request, responses)
 				if err != nil {
 					// Sending the request failed, which generally means the peer
 					// was diconnected in between assignment and network send.
 					// Although all peer removal operations return allocated tasks
 					// to the queue, that is async, and we can do better here by
 					// immediately pushing the unfulfilled requests.
-					queue.unreserve(reserve.Request.Peer.id) // TODO(karalabe): This needs a non-expiration method
+					queue.unreserve(peer.id) // TODO(karalabe): This needs a non-expiration method
 					continue
 				}
-				pending[reserve.Request.Peer.id] = req
+				pending[peer.id] = req
 
 				ttl := d.peers.rates.TargetTimeout()
 				ordering[req] = timeouts.Size()
@@ -513,6 +516,11 @@ func (d *Downloader) concurrentFetchBodiesDht(queue *bodyQueue, beaconMode bool)
 				if timeouts.Size() == 1 {
 					timeout.Reset(ttl)
 				}
+			}
+			if noClosePeers {
+				header, _ := queue.queue.blockTaskQueue.Peek()
+				d.P2pServer.AddHash(header.(*types.Header).Hash())
+				continue
 			}
 			// Make sure that we have peers available for fetching. If all peers have been tried
 			// and all failed throw an error
@@ -685,5 +693,4 @@ func (d *Downloader) concurrentFetchBodiesDht(queue *bodyQueue, beaconMode bool)
 			}
 		}
 	}
-	return errors.New("jsp")
 }

@@ -473,7 +473,7 @@ func (q *queue) ReserveBodies(p *peerConnection, count int) (*fetchRequest, bool
 	return q.reserveHeaders(p, count, q.blockTaskPool, q.blockTaskQueue, q.blockPendPool, bodyType)
 }
 
-func (q *queue) ReserveBodiesDHT(peers []*peerConnection, count func(*peerConnection, time.Duration)(int), t time.Duration) []Reserve {
+func (q *queue) ReserveBodiesDHT(p *peerConnection, count int) (*fetchRequest, bool, bool, bool) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
@@ -482,102 +482,94 @@ func (q *queue) ReserveBodiesDHT(peers []*peerConnection, count func(*peerConnec
 	pendPool := q.blockPendPool
 	kind := bodyType
 
-	var res []Reserve
-
 	// reserveHeader
 
-	// Short circuit if the pool has been depleted, or if the peer's already
-	// downloading something (sanity check not to corrupt state)
 	if taskQueue.Empty() {
-		return append(res, Reserve{nil, false, true})
+		return nil, false, true, false
 	}
-	for _, p := range(peers) {
-		log.Info("ici", "peer", common.HexToHash(p.id),)
-		if _, ok := pendPool[p.id]; ok {
-			res = append(res, Reserve{nil, false, false})
+	if _, ok := pendPool[p.id]; ok {
+		return nil, false, false, false
+	}
+	// Retrieve a batch of tasks, skipping previously failed ones
+	send := make([]*types.Header, 0, count)
+	skip := make([]*types.Header, 0)
+	progress := false
+	throttled := false
+	for proc := 0; len(send) < count && !taskQueue.Empty(); proc++ {
+		// the task queue will pop items in order, so the highest prio block
+		// is also the lowest block number.
+		h, _ := taskQueue.Peek()
+		header := h.(*types.Header)
+		// we can ask the resultcache if this header is within the
+		// "prioritized" segment of blocks. If it is not, we need to throttle
+
+		if !enode.IsClose(header.Hash(), common.HexToHash(p.id)) {
+			taskQueue.PopItem()
+			skip = append(skip, header)
 			continue
 		}
-		// Retrieve a batch of tasks, skipping previously failed ones
-		send := make([]*types.Header, 0, count(p, t))
-		skip := make([]*types.Header, 0)
-		progress := false
-		throttled := false
-		for proc := 0; len(send) < count(p, t) && !taskQueue.Empty(); proc++ {
-			// the task queue will pop items in order, so the highest prio block
-			// is also the lowest block number.
-			h, _ := taskQueue.Peek()
-			header := h.(*types.Header)
-			// we can ask the resultcache if this header is within the
-			// "prioritized" segment of blocks. If it is not, we need to throttle
-			
-			// si pas proche continue
-			if !enode.IsClose(header.Hash(), common.HexToHash(p.id)) {
-				continue
-			}
 
-			stale, throttle, item, err := q.resultCache.AddFetch(header, q.mode == SnapSync, q.dht)
-			if stale {
-				// Don't put back in the task queue, this item has already been
-				// delivered upstream
-				taskQueue.PopItem()
-				progress = true
-				delete(taskPool, header.Hash())
-				proc = proc - 1
-				log.Error("Fetch reservation already delivered", "number", header.Number.Uint64())
-				continue
-			}
-			if throttle {
-				// There are no resultslots available. Leave it in the task queue
-				// However, if there are any left as 'skipped', we should not tell
-				// the caller to throttle, since we still want some other
-				// peer to fetch those for us
-				throttled = len(skip) == 0
-				break
-			}
-			if err != nil {
-				// this most definitely should _not_ happen
-				log.Warn("Failed to reserve headers", "err", err)
-				// There are no resultslots available. Leave it in the task queue
-				break
-			}
-			if item.Done(kind) {
-				// If it's a noop, we can skip this task
-				delete(taskPool, header.Hash())
-				taskQueue.PopItem()
-				proc = proc - 1
-				progress = true
-				continue
-			}
-			// Remove it from the task queue
+		stale, throttle, item, err := q.resultCache.AddFetch(header, q.mode == SnapSync, q.dht)
+		if stale {
+			// Don't put back in the task queue, this item has already been
+			// delivered upstream
 			taskQueue.PopItem()
-			// Otherwise unless the peer is known not to have the data, add to the retrieve list
-			if p.Lacks(header.Hash()) {
-				skip = append(skip, header)
-			} else {
-				send = append(send, header)
-			}
+			progress = true
+			delete(taskPool, header.Hash())
+			proc = proc - 1
+			log.Error("Fetch reservation already delivered", "number", header.Number.Uint64())
+			continue
 		}
-		// Merge all the skipped headers back
-		for _, header := range skip {
-			taskQueue.Push(header, -int64(header.Number.Uint64()))
+		if throttle {
+			// There are no resultslots available. Leave it in the task queue
+			// However, if there are any left as 'skipped', we should not tell
+			// the caller to throttle, since we still want some other
+			// peer to fetch those for us
+			throttled = len(skip) == 0
+			break
 		}
-		if q.resultCache.HasCompletedItems() {
-			// Wake Results, resultCache was modified
-			q.active.Signal()
+		if err != nil {
+			// this most definitely should _not_ happen
+			log.Warn("Failed to reserve headers", "err", err)
+			// There are no resultslots available. Leave it in the task queue
+			break
 		}
-		// Assemble and return the block download request
-		if len(send) == 0 {
-			res = append(res, Reserve{nil, progress, throttled})
+		if item.Done(kind) {
+			// If it's a noop, we can skip this task
+			delete(taskPool, header.Hash())
+			taskQueue.PopItem()
+			proc = proc - 1
+			progress = true
+			continue
 		}
-		request := &fetchRequest{
-			Peer:    p,
-			Headers: send,
-			Time:    time.Now(),
+		// Remove it from the task queue
+		taskQueue.PopItem()
+		// Otherwise unless the peer is known not to have the data, add to the retrieve list
+		if p.Lacks(header.Hash()) {
+			skip = append(skip, header)
+		} else {
+			send = append(send, header)
 		}
-		pendPool[p.id] = request
-		res = append(res, Reserve{request, progress, throttled})
 	}
-	return res
+	// Merge all the skipped headers back
+	for _, header := range skip {
+		taskQueue.Push(header, -int64(header.Number.Uint64()))
+	}
+	if q.resultCache.HasCompletedItems() {
+		// Wake Results, resultCache was modified
+		q.active.Signal()
+	}
+	// Assemble and return the block download request
+	if len(send) == 0 {
+		return nil, progress, throttled, true
+	}
+	request := &fetchRequest{
+		Peer:    p,
+		Headers: send,
+		Time:    time.Now(),
+	}
+	pendPool[p.id] = request
+	return request, progress, throttled, false
 }
 
 // ReserveReceipts reserves a set of receipt fetches for the given peer, skipping

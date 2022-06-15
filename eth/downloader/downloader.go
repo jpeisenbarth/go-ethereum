@@ -1234,8 +1234,12 @@ func (d *Downloader) fillHeaderSkeleton(from uint64, skeleton []*types.Header) (
 // and also periodically checking for timeouts.
 func (d *Downloader) fetchBodies(from uint64, beaconMode bool) error {
 	log.Debug("Downloading block bodies", "origin", from)
-	// err := d.concurrentFetchBodiesDht((*bodyQueue)(d), beaconMode)
-	err := d.concurrentFetch((*bodyQueue)(d), beaconMode)
+	var err error
+	if d.dht {
+		err = d.concurrentFetchBodiesDht((*bodyQueue)(d), beaconMode)
+	} else {
+		err = d.concurrentFetch((*bodyQueue)(d), beaconMode)
+	}
 
 	log.Debug("Block body download terminated", "err", err)
 	return err
