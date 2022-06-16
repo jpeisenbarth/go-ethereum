@@ -97,6 +97,7 @@ type headerTask struct {
 type Downloader struct {
 	mode uint32         // Synchronisation mode defining the strategy used (per sync cycle), use d.getMode() to get the SyncMode
 	dht bool         		//
+	dhtSync bool         		//
 	P2pServer *p2p.Server         		//
 	mux  *event.TypeMux // Event multiplexer to announce sync operation events
 
@@ -211,7 +212,7 @@ type BlockChain interface {
 }
 
 // New creates a new downloader to fetch hashes and blocks from remote peers.
-func New(checkpoint uint64, stateDb ethdb.Database, mux *event.TypeMux, chain BlockChain, lightchain LightChain, dropPeer peerDropFn, success func(), dht bool, server *p2p.Server) *Downloader {
+func New(checkpoint uint64, stateDb ethdb.Database, mux *event.TypeMux, chain BlockChain, lightchain LightChain, dropPeer peerDropFn, success func(), dht bool, dhtSync bool, server *p2p.Server) *Downloader {
 	if lightchain == nil {
 		lightchain = chain
 	}
@@ -229,6 +230,7 @@ func New(checkpoint uint64, stateDb ethdb.Database, mux *event.TypeMux, chain Bl
 		SnapSyncer:     snap.NewSyncer(stateDb),
 		stateSyncStart: make(chan *stateSync),
 		dht: 						dht,
+		dhtSync: 				dhtSync,
 		P2pServer:			server,	
 	}
 	dl.skeleton = newSkeleton(stateDb, dl.peers, dropPeer, newBeaconBackfiller(dl, success))
@@ -1235,7 +1237,7 @@ func (d *Downloader) fillHeaderSkeleton(from uint64, skeleton []*types.Header) (
 func (d *Downloader) fetchBodies(from uint64, beaconMode bool) error {
 	log.Debug("Downloading block bodies", "origin", from)
 	var err error
-	if d.dht {
+	if d.dhtSync {
 		err = d.concurrentFetchBodiesDht((*bodyQueue)(d), beaconMode)
 	} else {
 		err = d.concurrentFetch((*bodyQueue)(d), beaconMode)
@@ -1455,7 +1457,7 @@ func (d *Downloader) processHeaders(origin uint64, td, ttd *big.Int, beaconMode 
 					}
 					// TODO STAGE
 					// Si pas de pair proche du hash alors l'ajoute
-					if d.dht {
+					if d.dhtSync {
 						for _, hash := range(chunkHashes) {
 							if !enode.GetInstanceSelfNode().IsClose(hash) {
 								continue

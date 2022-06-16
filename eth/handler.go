@@ -84,6 +84,7 @@ type handlerConfig struct {
 	Network        uint64                    // Network identifier to adfvertise
 	Sync           downloader.SyncMode       // Whether to snap or full sync
 	Dht          	 bool       							 // 
+	DhtSync        bool       							 // 
 	BloomCache     uint64                    // Megabytes to alloc for snap sync bloom
 	EventMux       *event.TypeMux            // Legacy event mux, deprecate for `feed`
 	Checkpoint     *params.TrustedCheckpoint // Hard coded checkpoint for sync challenges
@@ -197,7 +198,7 @@ func newHandler(config *handlerConfig) (*handler, error) {
 	// Construct the downloader (long sync) and its backing state bloom if snap
 	// sync is requested. The downloader is responsible for deallocating the state
 	// bloom when it's done.
-	h.downloader = downloader.New(h.checkpointNumber, config.Database, h.eventMux, h.chain, nil, h.removePeer, success, config.Dht, config.P2pServer)
+	h.downloader = downloader.New(h.checkpointNumber, config.Database, h.eventMux, h.chain, nil, h.removePeer, success, config.Dht, config.DhtSync, config.P2pServer)
 
 
 	// Construct the fetcher (short sync)

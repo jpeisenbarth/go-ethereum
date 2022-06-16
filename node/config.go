@@ -206,6 +206,7 @@ type Config struct {
 	JWTSecret string `toml:",omitempty"`
 
 	DHT bool	`toml:",omitempty"`
+	DHTSync bool	`toml:",omitempty"`
 }
 
 // IPCEndpoint resolves an IPC endpoint based on a configured value, taking into

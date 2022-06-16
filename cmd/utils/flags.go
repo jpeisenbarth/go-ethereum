@@ -170,7 +170,11 @@ var (
 	}
 	DhtFlag = cli.BoolFlag{
 		Name:  "dht",
-		Usage: "TODO stage",
+		Usage: "The client stores only the data for wich it is responsible",
+	}
+	DhtSyncFlag = cli.BoolFlag{
+		Name:  "dhtSync",
+		Usage: "During the synchronization, the client receives the data from the peers responsible for that data",
 	}
 	DeveloperPeriodFlag = cli.IntFlag{
 		Name:  "dev.period",

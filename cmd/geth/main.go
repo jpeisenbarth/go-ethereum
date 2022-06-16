@@ -141,6 +141,7 @@ var (
 		utils.DeveloperFlag,
 		utils.DeveloperPeriodFlag,
 		utils.DhtFlag,
+		utils.DhtSyncFlag,
 		utils.DeveloperGasLimitFlag,
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,

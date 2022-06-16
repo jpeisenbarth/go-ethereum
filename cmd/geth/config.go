@@ -152,6 +152,9 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 	if ctx.GlobalIsSet(utils.DhtFlag.Name) {
 		cfg.Eth.DhtMode = true
 	}
+	if ctx.GlobalIsSet(utils.DhtSyncFlag.Name) {
+		cfg.Eth.DhtSync = true
+	}
 
 	return stack, cfg
 }
