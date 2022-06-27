@@ -303,7 +303,7 @@ func (t *UDPv4) findnode(toid enode.ID, toaddr *net.UDPAddr, target v4wire.Pubke
 
 	// Add a matcher for 'neighbours' replies to the pending reply queue. The matcher is
 	// active until enough nodes have been received.
-	nodes := make([]*node, 0, bucketSize)
+	nodes := make([]*node, 0, BucketSize)
 	nreceived := 0
 	rm := t.pending(toid, toaddr.IP, v4wire.NeighborsPacket, func(r v4wire.Packet) (matched bool, requestDone bool) {
 		reply := r.(*v4wire.Neighbors)
@@ -316,7 +316,7 @@ func (t *UDPv4) findnode(toid enode.ID, toaddr *net.UDPAddr, target v4wire.Pubke
 			}
 			nodes = append(nodes, n)
 		}
-		return true, nreceived >= bucketSize
+		return true, nreceived >= BucketSize
 	})
 	t.send(toaddr, toid, &v4wire.Findnode{
 		Target:     target,
@@ -721,7 +721,7 @@ func (t *UDPv4) handleFindnode(h *packetHandlerV4, from *net.UDPAddr, fromID eno
 
 	// Determine closest nodes.
 	target := enode.ID(crypto.Keccak256Hash(req.Target[:]))
-	closest := t.tab.findnodeByID(target, bucketSize, true).entries
+	closest := t.tab.findnodeByID(target, BucketSize, true).entries
 
 	// Send neighbors in chunks with at most maxNeighbors per packet
 	// to stay below the packet size limit.

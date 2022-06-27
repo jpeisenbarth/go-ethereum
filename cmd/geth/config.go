@@ -119,6 +119,9 @@ func defaultNodeConfig() node.Config {
 
 // makeConfigNode loads geth configuration and creates a blank node instance.
 func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
+
+	utils.SetBucketSize(ctx)
+
 	// Load defaults.
 	cfg := gethConfig{
 		Eth:     ethconfig.Defaults,
