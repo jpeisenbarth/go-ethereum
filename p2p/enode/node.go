@@ -279,8 +279,9 @@ func LogDist(a, b [32]byte) int {
 	return len(a)*8 - lz
 }
 
+var CommonBits int
+
 // TODO stage
 func IsClose(a, b common.Hash) bool {
-	var commonBits = 10
-	return 256-LogDist(a,b)>=commonBits
+	return 256-LogDist(a,b)>=CommonBits
 }

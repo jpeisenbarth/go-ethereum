@@ -829,6 +829,12 @@ var (
 		Usage: "InfluxDB organization name (v2 only)",
 		Value: metrics.DefaultConfig.InfluxDBOrganization,
 	}
+
+	CommonBitsDistanceFlag = cli.IntFlag{
+		Name:  "commonBits",
+		Usage: "Number of bits in common for the Xor distance",
+		Value: 10,
+	}
 )
 
 var (
@@ -919,6 +925,12 @@ func setNodeKey(ctx *cli.Context, cfg *p2p.Config) {
 func setNodeUserIdent(ctx *cli.Context, cfg *node.Config) {
 	if identity := ctx.GlobalString(IdentityFlag.Name); len(identity) > 0 {
 		cfg.UserIdent = identity
+	}
+}
+
+func SetCommonBitsDistance(ctx *cli.Context) {
+	if ctx.GlobalIsSet(CommonBitsDistanceFlag.Name) {
+		enode.CommonBits = ctx.GlobalInt(CommonBitsDistanceFlag.Name)
 	}
 }
 
