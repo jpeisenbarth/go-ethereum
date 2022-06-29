@@ -38,8 +38,10 @@ const (
 var (
 	ingressConnectMeter = metrics.NewRegisteredMeter("p2p/serves", nil)
 	ingressTrafficMeter = metrics.NewRegisteredMeter(ingressMeterName, nil)
+	ingressTrafficSize 	= metrics.NewRegisteredMeter(ingressMeterName+"/size", nil)
 	egressConnectMeter  = metrics.NewRegisteredMeter("p2p/dials", nil)
 	egressTrafficMeter  = metrics.NewRegisteredMeter(egressMeterName, nil)
+	egressTrafficSize  	= metrics.NewRegisteredMeter(egressMeterName+"/size", nil)
 	activePeerGauge     = metrics.NewRegisteredGauge("p2p/peers", nil)
 )
 
@@ -72,6 +74,7 @@ func newMeteredConn(conn net.Conn, ingress bool, addr *net.TCPAddr) net.Conn {
 func (c *meteredConn) Read(b []byte) (n int, err error) {
 	n, err = c.Conn.Read(b)
 	ingressTrafficMeter.Mark(int64(n))
+	ingressTrafficSize.Mark(int64(len(b)))
 	return n, err
 }
 
@@ -80,6 +83,7 @@ func (c *meteredConn) Read(b []byte) (n int, err error) {
 func (c *meteredConn) Write(b []byte) (n int, err error) {
 	n, err = c.Conn.Write(b)
 	egressTrafficMeter.Mark(int64(n))
+	egressTrafficSize.Mark(int64(len(b)))
 	return n, err
 }
 
