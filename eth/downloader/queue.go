@@ -560,6 +560,9 @@ func (q *queue) ReserveBodiesDHT(p *peerConnection, count int) (*fetchRequest, b
 		q.active.Signal()
 	}
 	// Assemble and return the block download request
+	if len(send) == 0 && len(skip) == 0 {
+		return nil, progress, throttled, false
+	}
 	if len(send) == 0 {
 		return nil, progress, throttled, true
 	}
