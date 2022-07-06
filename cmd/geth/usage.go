@@ -173,7 +173,7 @@ var AppHelpFlagGroups = []flags.FlagGroup{
 			utils.NoDiscoverFlag,
 			utils.DiscoveryV5Flag,
 			utils.NetrestrictFlag,
-			utils.BucketSizeFlag,
+			utils.KBucketFlag,
 			utils.NodeKeyFileFlag,
 			utils.NodeKeyHexFlag,
 		},

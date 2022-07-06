@@ -120,7 +120,7 @@ func defaultNodeConfig() node.Config {
 // makeConfigNode loads geth configuration and creates a blank node instance.
 func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 	utils.SetCommonBitsDistance(ctx)
-	utils.SetBucketSize(ctx)
+	utils.SetKBucket(ctx)
 	
 	// Load defaults.
 	cfg := gethConfig{
