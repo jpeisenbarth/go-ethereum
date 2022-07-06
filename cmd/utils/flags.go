@@ -712,8 +712,8 @@ var (
 		Name:  "discovery.dns",
 		Usage: "Sets DNS discovery entry points (use \"\" to disable DNS)",
 	}
-	BucketSizeFlag = cli.IntFlag{
-		Name:  "bucketSize",
+	KBucketFlag = cli.IntFlag{
+		Name:  "kBucket",
 		Usage: "Number of peers in a bucket",
 		Value: 16,
 	}
@@ -986,9 +986,9 @@ func setListenAddress(ctx *cli.Context, cfg *p2p.Config) {
 	}
 }
 
-func SetBucketSize(ctx *cli.Context) {
-	if ctx.GlobalIsSet(BucketSizeFlag.Name) {
-		discover.BucketSize = ctx.GlobalInt(BucketSizeFlag.Name)
+func SetKBucket(ctx *cli.Context) {
+	if ctx.GlobalIsSet(KBucketFlag.Name) {
+		discover.BucketSize = ctx.GlobalInt(KBucketFlag.Name)
 	}
 }
 
