@@ -38,9 +38,12 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/netutil"
 )
 
+var(
+	BucketSize = 16 // Kademlia bucket size
+)
+
 const (
 	alpha           = 3  // Kademlia concurrency factor
-	bucketSize      = 16 // Kademlia bucket size
 	maxReplacements = 10 // Size of per-bucket replacement list
 
 	// We keep buckets for the upper 1/15 of distances because
@@ -472,7 +475,7 @@ func (tab *Table) addSeenNode(n *node) {
 		// Already in bucket, don't add.
 		return
 	}
-	if len(b.entries) >= bucketSize {
+	if len(b.entries) >= BucketSize {
 		// Bucket full, maybe add as replacement.
 		tab.addReplacement(b, n)
 		return
@@ -514,7 +517,7 @@ func (tab *Table) addVerifiedNode(n *node) {
 		// Already in bucket, moved to front.
 		return
 	}
-	if len(b.entries) >= bucketSize {
+	if len(b.entries) >= BucketSize {
 		// Bucket full, maybe add as replacement.
 		tab.addReplacement(b, n)
 		return
@@ -524,7 +527,7 @@ func (tab *Table) addVerifiedNode(n *node) {
 		return
 	}
 	// Add to front of bucket.
-	b.entries, _ = pushNode(b.entries, n, bucketSize)
+	b.entries, _ = pushNode(b.entries, n, BucketSize)
 	b.replacements = deleteNode(b.replacements, n)
 	n.addedAt = time.Now()
 	if tab.nodeAddedHook != nil {

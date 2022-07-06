@@ -144,6 +144,7 @@ var (
 		utils.DhtSyncFlag,
 		utils.DeveloperGasLimitFlag,
 		utils.VMEnableDebugFlag,
+		utils.BucketSizeFlag,
 		utils.NetworkIdFlag,
 		utils.EthStatsURLFlag,
 		utils.FakePoWFlag,
