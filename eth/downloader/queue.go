@@ -473,7 +473,7 @@ func (q *queue) ReserveBodies(p *peerConnection, count int) (*fetchRequest, bool
 	return q.reserveHeaders(p, count, q.blockTaskPool, q.blockTaskQueue, q.blockPendPool, bodyType)
 }
 
-func (q *queue) ReserveBodiesDHT(p *peerConnection, count int) (*fetchRequest, bool, bool, bool) {
+func (q *queue) ReserveBodiesDHT(p *peerConnection, count int) (*fetchRequest, bool, bool) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
@@ -485,10 +485,10 @@ func (q *queue) ReserveBodiesDHT(p *peerConnection, count int) (*fetchRequest, b
 	// reserveHeader
 
 	if taskQueue.Empty() {
-		return nil, false, true, false
+		return nil, false, true
 	}
 	if _, ok := pendPool[p.id]; ok {
-		return nil, false, false, false
+		return nil, false, false
 	}
 	// Retrieve a batch of tasks, skipping previously failed ones
 	send := make([]*types.Header, 0, count)
@@ -560,11 +560,8 @@ func (q *queue) ReserveBodiesDHT(p *peerConnection, count int) (*fetchRequest, b
 		q.active.Signal()
 	}
 	// Assemble and return the block download request
-	if len(send) == 0 && len(skip) == 0 {
-		return nil, progress, throttled, false
-	}
 	if len(send) == 0 {
-		return nil, progress, throttled, true
+		return nil, progress, throttled
 	}
 	request := &fetchRequest{
 		Peer:    p,
@@ -572,7 +569,7 @@ func (q *queue) ReserveBodiesDHT(p *peerConnection, count int) (*fetchRequest, b
 		Time:    time.Now(),
 	}
 	pendPool[p.id] = request
-	return request, progress, throttled, false
+	return request, progress, throttled
 }
 
 // ReserveReceipts reserves a set of receipt fetches for the given peer, skipping

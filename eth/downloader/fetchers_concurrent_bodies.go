@@ -64,7 +64,7 @@ type Reserve struct {
 	Throttle bool
 }  
 
-func (q *bodyQueue) reserveBodies(peer *peerConnection, count int) (*fetchRequest, bool, bool, bool) {
+func (q *bodyQueue) reserveBodies(peer *peerConnection, count int) (*fetchRequest, bool, bool) {
 	return q.queue.ReserveBodiesDHT(peer, count)
 }
 

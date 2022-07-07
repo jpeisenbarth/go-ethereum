@@ -470,6 +470,7 @@ func (d *Downloader) concurrentFetchBodiesDht(queue *bodyQueue, beaconMode bool)
 				queued     = queue.pending()
 				noClosePeers bool
 			)
+			noClosePeers = true
 			for _, peer := range idles {
 				// Short circuit if throttling activated or there are no more
 				// queued tasks to be retrieved
@@ -482,12 +483,9 @@ func (d *Downloader) concurrentFetchBodiesDht(queue *bodyQueue, beaconMode bool)
 				// Reserve a chunk of fetches for a peer. A nil can mean either that
 				// no more headers are available, or that the peer is known not to
 				// have them.
-				request, progress, throttle, nclosePeers := queue.reserveBodies(peer, queue.capacity(peer, d.peers.rates.TargetRoundTrip()))
+				request, progress, throttle := queue.reserveBodies(peer, queue.capacity(peer, d.peers.rates.TargetRoundTrip()))
 				if progress {
 					progressed = true
-				}
-				if nclosePeers {
-					noClosePeers = true
 				}
 				if throttle {
 					throttled = true
@@ -498,6 +496,7 @@ func (d *Downloader) concurrentFetchBodiesDht(queue *bodyQueue, beaconMode bool)
 				}
 				// Fetch the chunk and make sure any errors return the hashes to the queue
 				req, err := queue.request(peer, request, responses)
+				log.Info("request parti", "oui", request.Headers)
 				if err != nil {
 					// Sending the request failed, which generally means the peer
 					// was diconnected in between assignment and network send.
@@ -507,6 +506,7 @@ func (d *Downloader) concurrentFetchBodiesDht(queue *bodyQueue, beaconMode bool)
 					queue.unreserve(peer.id) // TODO(karalabe): This needs a non-expiration method
 					continue
 				}
+				noClosePeers = false
 				pending[peer.id] = req
 
 				ttl := d.peers.rates.TargetTimeout()
@@ -518,6 +518,9 @@ func (d *Downloader) concurrentFetchBodiesDht(queue *bodyQueue, beaconMode bool)
 				}
 			}
 			if noClosePeers {
+				if queue.queue.blockTaskQueue.Empty() {
+					continue
+				}
 				header, _ := queue.queue.blockTaskQueue.Peek()
 				d.P2pServer.AddHash(header.(*types.Header).Hash())
 				continue
