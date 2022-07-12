@@ -116,6 +116,11 @@ func (f *chainFreezer) freeze(db ethdb.KeyValueStore, dht bool) {
 				return
 			}
 		}
+		if enode.GetInstanceSelfNode() == nil {
+			log.Info("Local node pas chargé")
+			backoff = true
+			continue
+		}
 		// Retrieve the freezing threshold.
 		hash := ReadHeadBlockHash(nfdb)
 		if hash == (common.Hash{}) {
