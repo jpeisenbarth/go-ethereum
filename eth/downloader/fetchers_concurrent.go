@@ -514,7 +514,7 @@ func (d *Downloader) concurrentFetchBodiesDht(queue *bodyQueue, beaconMode bool)
 					// this most definitely should _not_ happen
 					log.Warn("Failed to reserve headers", "err", err)
 					// There are no resultslots available. Leave it in the task queue
-					// break
+					break
 				}
 				if item.Done(kind) {
 					// If it's a noop, we can skip this task
