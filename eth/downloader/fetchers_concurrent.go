@@ -468,29 +468,34 @@ func (d *Downloader) concurrentFetchBodiesDht(queue *bodyQueue, beaconMode bool)
 
 				//selection du pair
 				for _, peer := range(idles) {
-					if enode.IsClose(header.Hash(), common.HexToHash(peer.id)) && len(send[peer]) < queue.capacity(peer, d.peers.rates.TargetRoundTrip()) {
+					if enode.IsClose(header.Hash(), common.HexToHash(peer.id)) {
 						nearestPeer = peer
 						break
 					}
 				}
 
 				if nearestPeer == nil {
-					log.Info("Pas de pair ou pair plein", "header hash", header.Hash(), "nim", header.Number)
-					d.P2pServer.AddHash(header.Hash())
+					log.Info("Pas de pair", "header hash", header.Hash(), "num", header.Number)
+					// d.P2pServer.AddHash(header.Hash())
 					break
 				}
 
-				stale, throttle, item, err := q.resultCache.AddFetch(header, q.mode == SnapSync, q.dht)
-				if stale {
-					// Don't put back in the task queue, this item has already been
-					// delivered upstream
-					queue.queue.lock.Lock()
-					taskQueue.PopItem()
-					delete(taskPool, header.Hash())
-					queue.queue.lock.Unlock()
-					log.Error("Fetch reservation already delivered", "number", header.Number.Uint64())
-					continue
+				if len(send[nearestPeer]) > queue.capacity(nearestPeer, d.peers.rates.TargetRoundTrip()) {
+					log.Info("Pair proche plein", "header hash", header.Hash(), "num", header.Number)
+					break
 				}
+
+				_ , throttle, item, err := q.resultCache.AddFetch(header, q.mode == SnapSync, q.dht)
+				// if stale {
+				// 	// Don't put back in the task queue, this item has already been
+				// 	// delivered upstream
+				// 	queue.queue.lock.Lock()
+				// 	taskQueue.PopItem()
+				// 	delete(taskPool, header.Hash())
+				// 	queue.queue.lock.Unlock()
+				// 	log.Error("Fetch reservation already delivered", "number", header.Number.Uint64())
+				// 	continue
+				// }
 				if throttle {
 					// There are no resultslots available. Leave it in the task queue
 					// However, if there are any left as 'skipped', we should not tell
