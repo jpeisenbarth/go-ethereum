@@ -525,6 +525,8 @@ func (d *Downloader) concurrentFetchBodiesDht(queue *bodyQueue, beaconMode bool)
 				send[nearestPeer] = append(send[nearestPeer], header)
 			}
 
+			log.Info("help", "a envoyer", len(send))
+
 			for peer, headers := range(send) {
 				request := &fetchRequest{
 					Peer:    peer,
