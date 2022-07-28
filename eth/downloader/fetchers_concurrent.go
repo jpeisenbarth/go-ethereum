@@ -448,19 +448,8 @@ func (d *Downloader) concurrentFetchBodiesDht(queue *bodyQueue, beaconMode bool)
 				caps  []int
 			)
 			for _, peer := range d.peers.AllPeers() {
-				pending, stale := pending[peer.id], stales[peer.id]
-				if pending == nil && stale == nil {
-					idles = append(idles, peer)
-					caps = append(caps, queue.capacity(peer, time.Second))
-				} else if stale != nil {
-					if waited := time.Since(stale.Sent); waited > timeoutGracePeriod {
-						// Request has been in flight longer than the grace period
-						// permitted it, consider the peer malicious attempting to
-						// stall the sync.
-						peer.log.Warn("Peer stalling, dropping", "waited", common.PrettyDuration(waited))
-						d.dropPeer(peer.id)
-					}
-				}
+				idles = append(idles, peer)
+				caps = append(caps, queue.capacity(peer, time.Second))
 			}
 			sort.Sort(&peerCapacitySort{idles, caps})
 
