@@ -469,27 +469,12 @@ func (d *Downloader) concurrentFetchBodiesDht(queue *bodyQueue, beaconMode bool)
 			taskQueue := q.blockTaskQueue
 			pendPool := q.blockPendPool
 			kind := bodyType
+			throttled := false
 
 			send := make(map[*peerConnection][]*types.Header)
-			for !taskQueue.Empty() {
+			for !taskQueue.Empty() && !throttled {
 				h, _ := taskQueue.Peek()
 				header := h.(*types.Header)
-
-				var nearestPeer *peerConnection
-
-				//selection du pair
-				for _, peer := range(idles) {
-					if enode.IsClose(header.Hash(), common.HexToHash(peer.id)) && len(send[peer]) < queue.capacity(peer, d.peers.rates.TargetRoundTrip()) {
-						nearestPeer = peer
-						break
-					}
-				}
-
-				if nearestPeer == nil {
-					log.Info("Pas de pair ou pair plein", "header hash", header.Hash(), "nim", header.Number)
-					d.P2pServer.AddHash(header.Hash())
-					break
-				}
 
 				stale, throttle, item, err := q.resultCache.AddFetch(header, q.mode == SnapSync, q.dht)
 				if stale {
@@ -507,8 +492,7 @@ func (d *Downloader) concurrentFetchBodiesDht(queue *bodyQueue, beaconMode bool)
 					// However, if there are any left as 'skipped', we should not tell
 					// the caller to throttle, since we still want some other
 					// peer to fetch those for us
-					// throttled = len(skip) == 0
-					// break
+					throttled = true
 				}
 				if err != nil {
 					// this most definitely should _not_ happen
@@ -523,6 +507,22 @@ func (d *Downloader) concurrentFetchBodiesDht(queue *bodyQueue, beaconMode bool)
 					taskQueue.PopItem()
 					queue.queue.lock.Unlock()
 					continue
+				}
+
+				var nearestPeer *peerConnection
+
+				//selection du pair
+				for _, peer := range(idles) {
+					if enode.IsClose(header.Hash(), common.HexToHash(peer.id)) && len(send[peer]) < queue.capacity(peer, d.peers.rates.TargetRoundTrip()) {
+						nearestPeer = peer
+						break
+					}
+				}
+
+				if nearestPeer == nil {
+					log.Info("Pas de pair ou pair plein", "header hash", header.Hash(), "nim", header.Number)
+					d.P2pServer.AddHash(header.Hash())
+					break
 				}
 				// Remove it from the task queue
 				taskQueue.PopItem()
