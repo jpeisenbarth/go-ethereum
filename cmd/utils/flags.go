@@ -170,11 +170,11 @@ var (
 		Usage: "Ephemeral proof-of-authority network with a pre-funded developer account, mining enabled",
 	}
 	DhtFlag = cli.BoolFlag{
-		Name:  "dht",
-		Usage: "The client stores only the data for wich it is responsible",
+		Name:  "storeInDHT",
+		Usage: "The client stores only the data for which it is responsible for",
 	}
 	DhtSyncFlag = cli.BoolFlag{
-		Name:  "dhtSync",
+		Name:  "syncFromDHT",
 		Usage: "During the synchronization, the client receives the data from the peers responsible for that data",
 	}
 	DeveloperPeriodFlag = cli.IntFlag{
