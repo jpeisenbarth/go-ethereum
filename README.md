@@ -1,3 +1,11 @@
+## DHT Storage Branch information
+
+This version of Geth allows a user (through two new options -i-syncFromDHT and --storeInDHT) to take advantage of the DHT to decrease the storage capacity needed to run a node.
+
+Two main functions were modified  to implement our proposal :
+- freezeRange in core/rawdb/chain_freezer.go
+- Schedule in eth/downloader/queue.go
+
 ## Go Ethereum
 
 Official Golang implementation of the Ethereum protocol.
