@@ -313,8 +313,6 @@ func (q *queue) Schedule(headers []*types.Header, hashes []common.Hash, from uin
 		// Make sure no duplicate requests are executed
 		// We cannot skip this, even if the block is empty, since this is
 		// what triggers the fetchResult creation.
-		// TODO stage :
-		// En mode DHT on ne veut plus d'une requete de body systematique
 		if !q.dht || enode.GetInstanceSelfNode().IsClose(hash)  {
 			requestBody = true
 			if _, ok := q.blockTaskPool[hash]; ok {

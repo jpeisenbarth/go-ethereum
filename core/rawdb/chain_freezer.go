@@ -271,9 +271,6 @@ func (f *chainFreezer) freezeRange(nfdb *nofreezedb, number, limit uint64, dht b
 			if len(header) == 0 {
 				return fmt.Errorf("block header missing, can't freeze block %d", number)
 			}
-			// TODO stage :
-			// On empeche la lecture ici du body
-			// manque la vérification du type de noeud
 			var body []byte = nil
 			if !dht || enode.GetInstanceSelfNode().IsClose(hash) {
 				body = ReadBodyRLP(nfdb, hash, number)
@@ -297,9 +294,6 @@ func (f *chainFreezer) freezeRange(nfdb *nofreezedb, number, limit uint64, dht b
 			if err := op.AppendRaw(freezerHeaderTable, number, header); err != nil {
 				return fmt.Errorf("can't write header to Freezer: %v", err)
 			}
-			// TODO stage :
-			// Actuellement je laisse l'écrire car ca crée d'autre erreur
-			// Lecrire à vide prendre moins de place mais en elle en prend -> future work empeche l'écriture
 			if err := op.AppendRaw(freezerBodiesTable, number, body); err != nil {
 				return fmt.Errorf("can't write body to Freezer: %v", err)
 			}
